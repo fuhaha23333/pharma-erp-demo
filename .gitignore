@@ -1,26 +1,51 @@
+
 # Java / Maven
+
 backend/target/
 *.class
 *.jar
 *.war
 
 # IntelliJ IDEA
+
 .idea/
 *.iml
 
+# VS Code
+
+.vscode/
+
 # macOS
+
 .DS_Store
 
 # Frontend
+
 frontend/node_modules/
 frontend/dist/
 
 # Logs
+
 *.log
 logs/
 
 # Environment / local config
+
+# Ignore real local env files, but keep templates such as .env.example
+
 .env
-.env.*
+.env.local
+.env.*.local
+
+# Spring Boot local config
+
 application-local.yml
 application-dev-local.yml
+application-prod-local.yml
+
+# Keep config templates
+
+!.env.example
+!.env.template
+!*.example
+!*.template
