@@ -1,430 +1,511 @@
-# 项目当前状态基线
+# 项目当前状态基线（CURRENT_STATE）
 
 ## 1. 文档信息
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档用途 | 记录 `pharma-erp-demo` 在 Goal 1.1 审计时可以由仓库证据确认的现状，作为后续需求、测试、权限、审计和业务模块开发的事实基线。 |
-| 审计日期 | 2026-07-18（Asia/Shanghai） |
-| 审计范围 | Git 历史、项目规则、目录结构、Maven 配置、Java 源码、Spring 配置、SQL、测试、前端/CI/部署资产及本地可执行的编译测试。 |
-| 当前分支 | `main` |
-| 基线提交 | `cad7ff6 docs: add Goal 1 documentation placeholders` |
-| 远程跟踪引用 | 审计开始时，本地 `HEAD`、本地记录的 `origin/main` 和 `origin/HEAD` 均指向 `cad7ff6`。本次没有执行 `git fetch`，因此没有独立验证远端服务器是否还有更新。 |
-| 主要信息来源 | `AGENTS.md`、`backend/pom.xml`、`backend/src/`、`sql/`、Git 命令结果及 Maven 命令结果。 |
-| 审计限制 | 未启动长期运行的应用，未连接或修改 MySQL，未执行 SQL，未调用真实 HTTP 接口，未进行前端联调，也未进行正式法规或 GSP 符合性判断。 |
+| 文档版本 | v2.0 |
+| 文档性质 | 动态事实基线 |
+| 快照日期 | 2026-07-28（Asia/Shanghai） |
+| 适用项目 | `pharma-erp-demo` |
+| 当前分支 | `feat/database-baseline` |
+| Goal 起始基线 | `cef15bc` |
+| 主线冻结基线 | `cef15bc`；DOC-STATE-02 开始时本地 `main`、`origin/main`、`origin/HEAD` 均指向该提交 |
+| 当前阶段 | 核心业务与数据库逻辑设计已经冻结；数据库 DDL 和对应 Java 实现尚未开始正式迁移；项目正处于数据库基线实施准备阶段。 |
+| 本次 Goal | `DOC-STATE-02：重建当前仓库事实基线` |
+| 主要证据 | 当前 Git 状态和历史、冻结设计文档、`backend/pom.xml`、当前 Java 源码、配置、测试、SQL、前端目录及本次 Maven 命令结果 |
 
-### 1.1 结论使用规则
+本文替代旧版 `CURRENT_STATE.md` 中基于 2026-07-18、`main`、`cad7ff6` 的历史快照结论。Git 历史继续保存旧快照，但旧结论不再代表当前仓库状态。
 
-本文严格区分以下证据层级：
+---
 
-- **代码存在**：仓库中能找到实现，但不代表它已经运行成功。
-- **编译通过**：Java 源码能被当前 Maven/JDK 环境编译，但不代表接口和数据库可用。
-- **自动化测试通过**：只有测试实际覆盖到的行为才算通过；空的上下文测试不能证明业务接口正确。
-- **运行验证**：需要真正启动应用并调用接口；本次未执行。
-- **数据库验证**：需要在明确的测试数据库中执行或查询；本次未执行。
-- **未发现**：在本次完整仓库范围内未找到实现，不等于外部仓库或未提供环境中一定不存在。
+## 2. 文档用途与边界
 
-### 1.2 Git 基线
+### 2.1 用途
 
-审计开始前执行的 Git 检查结果：
+本文用于回答：
 
-- `git status --short` 无输出，工作区干净，不存在已跟踪修改或未跟踪文件。
-- 当前分支为 `main`。
-- `HEAD`、本地记录的 `origin/main` 和 `origin/HEAD` 均指向 `cad7ff6`。
-- `git branch --all` 只显示本地 `main` 及其 `origin/main` 远程跟踪引用；未发现 tag 或 stash。
-- 仓库当前只有 6 条可见提交记录：
+1. 当前仓库中实际存在什么；
+2. 哪些设计已经冻结；
+3. 哪些代码、SQL 和测试已经存在；
+4. 哪些结果已经编译、自动化测试或手工验证；
+5. 冻结设计与当前实现之间还差什么；
+6. 下一 Goal 可以从哪里开始。
 
-| 提交 | 提交说明 | 从提交信息和变更可确认的概要 |
-| --- | --- | --- |
-| `cad7ff6` | `docs: add Goal 1 documentation placeholders` | 添加 7 个 Goal 1 空文档占位文件。 |
-| `620ab8b` | `feat: add drug master CRUD` | 添加药品档案相关代码；实际能力仍以本文源码审计为准。 |
-| `58393e6` | `chore: update local database name` | 将仓库配置使用的数据库名统一为 `pharma_erp`。 |
-| `3c6bf0e` | `docs: update codex project instructions` | 更新项目长期规则。 |
-| `5b9897c` | `fix gitignore env templates` | 修正本地环境文件与模板的忽略规则。 |
-| `672a6f7` | `init backend skeleton` | 初始化后端骨架。 |
+### 2.2 边界
 
-本文和 `TECH_DEBT.md` 是 Goal 1.1 执行后产生的预期未提交变化；它们不属于上述基线提交。
+本文是事实快照，不是需求、实施计划或合规结论。
 
-### 1.3 Goal 1.1 范围和完成标准
+本文不会把以下概念混为一谈：
 
-本 Goal 的唯一交付物是：
+```text
+设计已经冻结
+≠
+数据库已经实现
+≠
+Java 业务已经实现
+≠
+系统已经通过合规验证
+```
 
-1. 填写已跟踪的 `docs/CURRENT_STATE.md`，建立事实基线。
-2. 新增 `docs/TECH_DEBT.md`，记录有证据的技术债和建议方向。
+当前仓库仍是药品批发 ERP 验证型 Demo，不是正式商业 ERP，不表示已经通过 GSP 检查、计算机系统验证或药品监管验收，也不能直接承载真实药品经营数据。
 
-本 Goal 不修改 Java、SQL、YAML、XML、Maven 配置、其他业务文件或其他 Goal 1 占位文档，也不创建提交或执行 push。完成标准是：关键结论有仓库或命令证据，事实/推断/未确认项明确区分，两份文档相互一致，最终 Git 变化仅包含上述两个目标文件。
+---
 
-## 2. 项目定位
+## 3. 证据等级
 
-根据 `AGENTS.md`：
+| 证据等级 | 本文含义 |
+| --- | --- |
+| 设计已冻结 | 设计文档已完成并由 Git 提交或标签形成可追踪基线；不代表代码或数据库已经实现。 |
+| 仓库文件存在 | 当前 Git 跟踪清单中存在该文件；不代表文件内容已运行。 |
+| 代码存在 | 当前源码中存在对应类、方法或配置；不代表接口、数据库或业务行为已经验证。 |
+| 编译已验证 | 本次或明确记录的 Maven 编译命令成功；只证明当前源码能够完成该构建步骤。 |
+| 自动化测试已验证 | 对应自动化测试实际运行并通过；结论只覆盖测试真正执行的行为。 |
+| 本地手工验证 | 用户在明确本地环境中手工执行并取得结果；不自动等于仓库内可重复验证。 |
+| 仓库内可重复验证 | 仓库包含可再次执行的脚本、测试或命令入口，且其输入和断言边界明确。 |
+| 未实现 | 在本次指定范围的源码、SQL、配置或前端中未发现对应实现。 |
+| 未验证 | 文件或代码可能存在，但没有取得运行、接口、数据库或业务验收证据。 |
 
-- 项目面向中国大陆小型药品批发企业，目标是建设一个可演示、可试用的 ERP MVP。
-- 项目强调供应商/客户资质、商品首营、批号效期、采购验收、出库复核、库存流水、销售流向、审批和操作留痕等药品批发特点。
-- 规划技术形态是单体架构、前后端分离；后端使用 Java/Spring Boot，前端规划使用 Vue 3/Element Plus。
-- 明确不规划微服务、SaaS 多租户、复杂工作流引擎和复杂财务系统。
+同一对象可以同时具有多个等级。例如：Drug 代码和旧 SQL 均存在且后端编译通过，但 Drug 业务没有自动化测试、HTTP、数据库或浏览器验收证据。
 
-以上是**建设目标和范围约束**，不是当前已经完成的功能。根据本次审计证据，项目当前更准确的阶段是“后端原型”，尚不能称为完整 MVP、可试运行系统或可商用系统。
+---
 
-证据：`AGENTS.md` 第 1～4 节、`backend/pom.xml`。
+## 4. Git 与冻结设计基线
 
-## 3. 仓库结构
+### 4.1 DOC-STATE-02 开始时 Git 事实
+
+本次开始时复核结果：
+
+- 当前分支：`feat/database-baseline`；
+- Goal 开始时 HEAD：`cef15bc`；
+- 工作区：干净；
+- `git diff --name-status main...HEAD`：无输出；
+- Goal 开始时当前分支与 `main` 位于同一提交；
+- 当前仓库范围内适用的规则文件为根目录 `AGENTS.md`。
+
+`cef15bc` 当前同时具有以下三个标签：
+
+```text
+business-state-machine-v1.1
+role-permission-matrix-v1.1
+database-design-demo-v1.0
+```
+
+### 4.2 已冻结文档
+
+| 文档 | 版本 | 状态 | 当前事实 |
+| --- | --- | --- | --- |
+| `docs/DEMO_SCOPE.md` | v1.1 | 冻结基线 | 冻结全国核心范围、广东增强 Mock、里程碑和验收边界。 |
+| `docs/BUSINESS_FLOW.md` | v1.0 | 冻结基线 | 冻结 BF-01 至 BF-18 的业务流程和里程碑关系。 |
+| `docs/BUSINESS_STATE_MACHINE.md` | v1.1 | 冻结基线 | 冻结 SM-01 至 SM-18 的状态、转换、守卫和审计语义。 |
+| `docs/ROLE_PERMISSION_MATRIX.md` | v1.1 | 冻结基线 | 冻结 10 个演示角色、业务动作权限和不相容职责。 |
+| `docs/DATABASE_DESIGN_DEMO.md` | v1.0 | 冻结基线 | 冻结 51 张候选表、事务、约束、状态映射和分阶段实施方向。 |
+
+后三份同步设计文档在 `cef15bc` 共同冻结。上述文档是目标设计依据，不是当前实现清单。
+
+---
+
+## 5. 当前项目阶段
+
+当前阶段应准确表达为：
+
+> 核心业务与数据库逻辑设计已经冻结；数据库 DDL 和对应 Java 实现尚未开始正式迁移；项目正处于数据库基线实施准备阶段。
+
+这意味着：
+
+- 产品范围、业务流程、状态机、角色权限和数据库逻辑模型已经形成冻结基线；
+- 51 张候选表仍是设计，尚未转成正式仓库 DDL；
+- 当前 Java 代码仍是旧数据库设计下的早期 Drug 原型；
+- 权限、审计和全国核心业务闭环尚未进入正式实现；
+- M2 广东增强和 M3 演示加固均未开始；
+- 当前不能宣称 M1、M2、M3 中任何里程碑已经验收通过。
+
+---
+
+## 6. 当前仓库结构
+
+当前 Git 跟踪 35 个文件，其中：
+
+- 后端主 Java 文件：17 个；
+- 后端测试 Java 文件：1 个；
+- `docs/*.md`：12 个；
+- SQL 文件：1 个；
+- 前端文件：0 个。
+
+当前主要结构：
 
 ```text
 pharma-erp-demo/
-├── AGENTS.md                 项目长期规则和 P0 边界
+├── AGENTS.md
 ├── backend/
-│   ├── pom.xml               Spring Boot Maven 配置
+│   ├── pom.xml
 │   └── src/
-│       ├── main/java/        后端主代码
-│       ├── main/resources/   Git 跟踪的 application.yml
-│       └── test/java/        当前仅有一个上下文测试
-├── docs/                     Goal 1 文档骨架与基线文档
-├── frontend/                 本地空目录，无 Git 跟踪的前端工程
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com/fuhaha/pharmaerp/
+│       │   │       ├── common/
+│       │   │       ├── config/
+│       │   │       └── modules/
+│       │   │           ├── master/drug/
+│       │   │           └── system/controller/
+│       │   └── resources/application.yml
+│       └── test/java/com/fuhaha/pharmaerp/PharmaErpApplicationTests.java
+├── docs/
+├── frontend/                  本地目录存在，但没有 Git 跟踪文件
 └── sql/
     └── 001_create_drug_table.sql
 ```
 
-补充说明：
-
-- Git 当前跟踪 34 个文件，其中后端主代码 Java 文件 17 个、测试 Java 文件 1 个。
-- `frontend/` 没有任何文件；Git 不保存空目录，因此全新克隆仓库时不会得到该目录。
-- `.idea/`、`backend/target/` 和 `backend/src/main/resources/application-local.yml` 存在于本次审计工作机，但被 `.gitignore` 忽略，不属于仓库交付内容。
-- 审计开始时 11 个 `docs/*.md` 均为 0 字节占位文件；Goal 1.1 只填写本文并新增 `TECH_DEBT.md`，其余占位文件保持不变。
-- 仓库根目录未发现 `README.md`；已跟踪的 `docs/README.md` 仍为空占位文件。
-
-证据：`git ls-files`、`find`、`wc -c docs/*.md`、`.gitignore`。
-
-## 4. 技术栈
-
-| 技术 | 当前版本或状态 | 仓库证据 |
-| --- | --- | --- |
-| Java | 项目要求 Java 17；审计环境为 Java 17.0.17 | `backend/pom.xml` 的 `java.version`；`mvn --version` |
-| Maven | 使用 Maven 构建；审计环境为 Maven 3.9.16；仓库未发现 Maven Wrapper | `backend/pom.xml`；仓库文件清单；`mvn --version` |
-| Spring Boot | 3.3.5 | `backend/pom.xml` 的 parent |
-| Spring MVC | 已引入 Web Starter | `backend/pom.xml` 的 `spring-boot-starter-web` |
-| 参数校验 | 已引入 Jakarta Validation | `backend/pom.xml` 的 `spring-boot-starter-validation`；Drug DTO 注解 |
-| MyBatis-Plus | 3.5.9，包含 Spring Boot 3 Starter 与 JSQLParser | `backend/pom.xml` |
-| 数据库 | 规划并配置 MySQL；驱动为运行时依赖 | `backend/pom.xml`、`backend/src/main/resources/application.yml` |
-| API 文档 | Knife4j 4.5.0、Springdoc 配置已启用 | `backend/pom.xml`、`application.yml` |
-| Lombok | 已引入，可选依赖 | `backend/pom.xml` |
-| 测试 | Spring Boot Test/JUnit 5；仅 1 个 `contextLoads` 测试 | `backend/pom.xml`、`PharmaErpApplicationTests.java` |
-| 认证授权 | `AGENTS.md` 规划后续使用 Sa-Token；POM 和源码中尚未发现实现 | `AGENTS.md`、`backend/pom.xml`、Java 源码检索 |
-| 前端 | 规划 Vue 3 + Element Plus；当前仓库没有前端工程文件 | `AGENTS.md`、`frontend/` 文件检查 |
-
-MySQL 驱动的具体版本由 Spring Boot parent 的依赖管理决定，当前 POM 没有单独写死该版本；本文不根据记忆推测版本号。
-
-## 5. 当前架构和代码分层
-
-### 5.1 架构形态
-
-- 启动类 `com.fuhaha.pharmaerp.PharmaErpApplication` 使用标准 `@SpringBootApplication`。
-- 当前为单个 Spring Boot Maven 工程，属于单体后端原型。
-- `AGENTS.md` 规划前后端分离，但当前只有后端源码，尚未形成前后端联调架构。
-- 数据访问主要使用 MyBatis-Plus `BaseMapper`；当前未发现 Mapper XML。
-
-### 5.2 包结构
+当前仍为空的 Markdown 文件：
 
 ```text
-com.fuhaha.pharmaerp
-├── common
-│   ├── exception             业务异常和全局异常处理
-│   ├── page                  分页返回模型
-│   └── result                统一返回模型
-├── config                    MyBatis-Plus 分页配置
-└── modules
-    ├── system/controller     健康检查
-    └── master/drug           药品档案模块
+docs/COMPLIANCE_MATRIX.md
+docs/DEMO_PLAN.md
+docs/GOAL_TEMPLATE.md
+docs/OPEN_QUESTIONS.md
+docs/README.md
 ```
 
-`AGENTS.md` 中提到的 `quality`、`purchase`、`stock`、`sales` 等是建议模块结构；本次仓库文件清单中尚未发现这些模块实现。
+这些空文件不能作为已完成设计或已实现能力的证据。
 
-### 5.3 分层关系
+---
+
+## 7. 已完成的设计工作
+
+### 7.1 已冻结的范围与里程碑
+
+- `NATIONAL_DEFAULT`：全国药品批发核心流程；
+- `GD_DEMO_PROFILE`：广东省级追溯与监管能力的 Mock 展示；
+- M1：全国核心业务闭环；
+- M2：广东增强与质量展示；
+- M3：演示加固。
+
+### 7.2 已冻结的业务设计
+
+- BF-01 至 BF-18 的业务流程；
+- SM-01 至 SM-18 的业务状态机；
+- 系统管理员、采购员、收货员、验收员、质量管理员、质量负责人、仓库管理员、销售员、出库复核员、审计查看员共 10 个演示角色；
+- 申请、审核、批准、执行和独立复核的职责分离；
+- 后端权限阻断、状态历史、审计和不可无痕修改原则。
+
+### 7.3 已冻结的数据库逻辑设计
+
+数据库设计包含 51 张候选表：
 
 ```text
-HTTP 请求
-  → Controller：接收参数、触发校验、返回 Result
-  → Service：执行业务校验、状态变化和事务
-  → Mapper：通过 MyBatis-Plus 访问数据库
-  → Entity：映射数据库表
-
-DTO：接收请求字段
-VO：控制返回给调用方的字段
-Enum：集中定义业务状态代码
+M1：36 张
+M2：10 张
+M3：5 张
 ```
 
-药品模块基本遵循上述分层。当前 Entity 与 DTO/VO 分离，没有直接把 Entity 作为 Controller 返回值。
+设计已经冻结的重点包括：
 
-## 6. 已实现功能概览
+- 系统权限、基础资料、首营资质、采购收货验收、批次库存、销售出库、质量事件、追溯 Mock、审计历史和演示运维数据域；
+- `inventory_balance` 与 `inventory_ledger` 的库存模型；
+- `inventory_lock` 与库存质量结论分离；
+- `source_event_key` 入库幂等；
+- `current_marker` 和 `active_marker` 唯一策略；
+- 受控更正、不可变记录、事务边界和并发锁定规则。
 
-“已验证程度”只描述本次取得的最强证据，不扩大解释。
+这些均属于“设计已冻结”，当前尚未形成 51 张表的正式 DDL，也尚未形成对应 Java 实现。
 
-| 功能 | 当前状态 | 证据文件 | 已验证程度 | 说明 |
-| --- | --- | --- | --- | --- |
-| Spring Boot 启动骨架 | 已实现 | `PharmaErpApplication.java` | 有限自动化验证：仅 1 个 `contextLoads` 测试在沙箱外通过 | 沙箱内因 JVM/Mockito 运行限制失败；沙箱外同一命令成功；未验证 HTTP、Mapper、MySQL、DDL 和 Drug 业务行为，也未做长期启动验证。 |
-| 统一返回 `Result<T>` | 已实现 | `common/result/Result.java` | 已通过编译但未运行 | 提供 `code/message/data` 及成功、失败工厂方法。 |
-| 分页结果 `PageResult<T>` | 已实现 | `common/page/PageResult.java` | 已通过编译但未运行 | 提供记录、总数、页码和页大小。 |
-| 业务异常与全局异常处理 | 部分实现 | `BizException.java`、`GlobalExceptionHandler.java` | 已通过编译但未运行 | 已覆盖业务异常、参数校验和兜底异常；HTTP 状态和日志仍有缺口。 |
-| MyBatis-Plus 分页 | 已实现配置 | `config/MyBatisPlusConfig.java` | 已通过编译但未运行 | 注册 MySQL 分页拦截器；真实分页 SQL 未验证。 |
-| 健康检查 | 存在实现 | `modules/system/controller/HealthController.java` | 已通过编译但未运行 | `GET /health` 返回固定成功信息，不检查数据库。 |
-| 药品档案新增 | 存在实现 | `DrugController.java`、`DrugServiceImpl.java` | 已通过编译但未运行 | 未进行 HTTP、数据库或业务验收测试。 |
-| 药品档案更新 | 存在实现 | 同上 | 已通过编译但未运行 | 公开更新 DTO 不允许修改 `drugCode`。 |
-| 药品档案详情和分页 | 存在实现 | 同上 | 已通过编译但未运行 | 分页支持多个筛选条件。 |
-| 药品启用/停用 | 部分实现 | `DrugStatusEnum.java`、`DrugServiceImpl.java` | 已通过编译但未运行 | 只有启用/停用状态，尚未关联首营或质量审核。 |
-| `drug` 表 DDL | 存在脚本 | `sql/001_create_drug_table.sql` | 存在实现但未验证 | 未连接数据库，无法确认脚本已执行或实际表结构一致。 |
+---
 
-## 7. 药品档案模块详细现状
+## 8. 当前后端代码现状
 
-### 7.1 已存在的类
+### 8.1 技术栈
 
-| 分层 | 文件 | 职责 |
+| 技术 | 当前仓库事实 | 证据等级 |
 | --- | --- | --- |
-| Controller | `modules/master/drug/controller/DrugController.java` | 暴露新增、更新、详情、分页、启用和停用接口。 |
-| DTO | `DrugCreateDTO.java` | 新增请求字段和 Bean Validation 规则。 |
-| DTO | `DrugUpdateDTO.java` | 更新请求字段；不包含药品编码和状态。 |
-| DTO | `DrugPageQueryDTO.java` | 页码、页大小和查询筛选条件。 |
-| Entity | `entity/Drug.java` | 映射 `drug` 表，包含自增主键和逻辑删除字段。 |
-| Enum | `enums/DrugStatusEnum.java` | 定义 `ENABLED` 与 `DISABLED`。 |
-| Mapper | `mapper/DrugMapper.java` | 继承 `BaseMapper<Drug>`，没有自定义方法。 |
-| Service | `service/DrugService.java` | 定义 6 项药品档案操作。 |
-| Service 实现 | `service/impl/DrugServiceImpl.java` | 业务校验、事务、查询条件、状态变化和 VO 转换。 |
-| VO | `vo/DrugVO.java` | 对外返回药品字段、状态名称和时间。 |
+| Java | POM 指定 Java 17；本次运行环境为 Java 17.0.19 | 仓库文件存在；编译已验证 |
+| Maven | 单 Maven 后端工程；本次环境 Maven 3.9.16 | 仓库文件存在；编译已验证 |
+| Spring Boot | 3.3.5 | 仓库文件存在；上下文测试已验证 |
+| Spring Web / Validation | 已引入 | 代码存在；编译已验证 |
+| MyBatis-Plus | 3.5.9，含分页拦截器 | 代码存在；编译和上下文测试已验证 |
+| MySQL | 运行时驱动已引入，默认配置指向 `pharma_erp` | 配置存在；本次未验证数据库连接 |
+| Knife4j | 4.5.0，Springdoc/Knife4j 开关已配置 | 配置存在；未验证 HTTP 文档端点 |
+| Lombok | 已引入 | 代码存在；编译已验证 |
 
-以上相对路径均位于：
-`backend/src/main/java/com/fuhaha/pharmaerp/modules/master/drug/`。
+### 8.2 公共基础代码
 
-### 7.2 现有接口
+当前存在：
 
-| 请求方式 | 地址 | 代码证据 |
+- 统一响应 `Result<T>`；
+- 分页响应 `PageResult<T>`；
+- MyBatis-Plus MySQL 分页拦截器；
+- `BizException`；
+- `GlobalExceptionHandler`，覆盖业务异常、参数异常和兜底异常；
+- `GET /health` 固定健康响应。
+
+这些能力均已通过编译；当前没有 Controller/HTTP 自动化测试证明实际状态码、响应契约、分页 SQL或健康端点行为。
+
+### 8.3 Drug 模块文件
+
+当前 Drug 模块共有 10 个 Git 跟踪文件：
+
+| 分层 | 文件或数量 | 当前职责 |
 | --- | --- | --- |
-| `POST` | `/master/drugs` | `DrugController.create` |
-| `PUT` | `/master/drugs/{id}` | `DrugController.update` |
-| `GET` | `/master/drugs/{id}` | `DrugController.getDetail` |
-| `GET` | `/master/drugs/page` | `DrugController.page` |
-| `PUT` | `/master/drugs/{id}/enable` | `DrugController.enable` |
-| `PUT` | `/master/drugs/{id}/disable` | `DrugController.disable` |
+| Controller | `DrugController` | 新增、更新、详情、分页、启用、停用 6 个接口 |
+| DTO | `DrugCreateDTO`、`DrugUpdateDTO`、`DrugPageQueryDTO` | 请求参数和 Bean Validation |
+| Entity | `Drug` | 映射旧 `drug` 表 |
+| Enum | `DrugStatusEnum` | `ENABLED` / `DISABLED` |
+| Mapper | `DrugMapper` | 继承 MyBatis-Plus `BaseMapper<Drug>` |
+| Service | `DrugService`、`DrugServiceImpl` | 旧 Drug 业务校验、查询、写入和状态切换 |
+| VO | `DrugVO` | Drug 展示字段 |
 
-当前没有删除接口，因此准确描述是“新增、查询、更新和启停”，不能仅根据提交信息把它认定为已验证的完整 CRUD。
+当前接口：
 
-### 7.3 已有行为和校验
+```text
+POST /master/drugs
+PUT  /master/drugs/{id}
+GET  /master/drugs/{id}
+GET  /master/drugs/page
+PUT  /master/drugs/{id}/enable
+PUT  /master/drugs/{id}/disable
+```
 
-- 创建 DTO 对药品编码、名称、通用名、批准文号、剂型、规格、生产厂家、基本单位和储存条件设置非空和长度校验。
-- 更新 DTO 对核心字段设置非空和长度校验，但不暴露药品编码和状态字段。
-- 分页默认第 1 页、每页 10 条，限制最大每页 100 条；可按编码、名称、通用名、批准文号、厂家和状态筛选。
-- Service 对核心非空字段做二次检查，写入前清理普通首尾空格，空备注转换为 `null`。
-- 创建时先检查药品编码；DDL 定义了数据库唯一键，只有该脚本已在目标数据库正确执行时，它才构成最终数据约束。新记录由 Service 明确设为 `DISABLED`。
-- 创建、更新、启用和停用方法使用 `@Transactional(rollbackFor = Exception.class)`。
-- 启用和停用具备简单幂等处理：已经处于目标状态时直接返回。
-- 分页按创建时间和 ID 倒序。
+### 8.4 Drug 仍是旧模型
 
-证据：3 个 Drug DTO、`DrugServiceImpl.java`、`DrugStatusEnum.java`。
+当前 Drug 实体和 SQL 仍具有以下旧设计特征：
 
-### 7.4 当前业务边界
+- 状态只有 `ENABLED` 和 `DISABLED`；
+- Entity 使用 `deleted` 和 `@TableLogic`；
+- 旧字段使用 `drug_name`、`manufacturer` 等命名；
+- 未包含冻结数据库设计要求的 `business_category_code`、效期控制、近效期阈值和追溯管理级别；
+- 启用只检查旧核心字段完整，不校验首营品种、供应商或质量审批；
+- 更新关键药品字段没有受控更正或审计链。
 
-- `enable` 只验证药品核心字段完整，不读取首营审批、质量审核或证照数据。
-- 只有 `ENABLED/DISABLED` 两种状态，无法从当前代码表达待审核、审核通过或驳回。
-- 已启用档案仍可通过更新接口修改批准文号、规格、生产厂家等字段；当前没有变更审批或前后值留痕。
-- 当前没有供应商、客户、采购、验收、批号库存、库存流水、销售或出库复核模块可与药品档案形成业务闭环。
+冻结设计中的 Drug 状态为：
 
-`AGENTS.md` 对首营、审核和操作留痕提出了项目规则，但仓库中没有正式法规原文或已确认的合规矩阵。因此上述差距属于**项目规划差距和合规待核验事项**，不是本文给出的法律结论。
+```text
+DRAFT
+INCOMPLETE
+READY_FOR_FIRST_APPROVAL
+DISABLED
+```
 
-### 7.5 验证分层
+因此，当前 Drug 模块只能作为旧数据库设计下的早期原型，不能作为新模块的数据模型或实现范例。后续应依据冻结设计原地适配，而不是修改冻结设计迁就旧代码。
 
-| 验证层级 | 当前结论 |
-| --- | --- |
-| 代码存在 | 已确认。 |
-| Maven 编译 | 已通过。 |
-| 药品自动化测试 | 未发现；唯一测试没有调用药品模块。 |
-| 数据库连接与 CRUD | 未验证。 |
-| 真实 HTTP 调用 | 未验证。 |
-| Knife4j 调用 | 未验证。 |
-| 前端联调 | 未验证。 |
-| 业务验收 | 未验证。 |
+### 8.5 当前跟踪配置
 
-## 8. 公共基础能力现状
+仓库当前只跟踪 `backend/src/main/resources/application.yml`：
 
-| 能力 | 当前状态 | 证据与说明 |
-| --- | --- | --- |
-| 统一返回 | 已实现代码 | `Result.java` 提供 `code/message/data`。 |
-| 业务异常 | 已实现代码 | `BizException` 默认 code 为 400。 |
-| 全局异常 | 部分实现 | `GlobalExceptionHandler` 有多类处理器；业务异常处理未明确改变 HTTP 状态。 |
-| 分页 | 已实现代码和配置 | `PageResult.java`、`MyBatisPlusConfig.java`。 |
-| 参数校验 | 已实现于 Drug DTO/Controller | 使用 `@Valid`、`@NotBlank`、`@Size`、`@Min`、`@Max`。 |
-| 业务日志 | 未发现 | 未发现 Service 主动记录业务操作；兜底异常没有记录异常堆栈。 |
-| 登录 | 未发现 | POM 和源码未发现 Sa-Token 或其他登录实现。 |
-| 权限 | 未发现 | Controller 未发现角色或权限限制。 |
-| 操作审计 | 未发现 | 未发现 `audit_log` 实现、当前操作人或字段变更前后值。 |
-| 数据字典 | 未发现 | 当前枚举只覆盖药品启停状态。 |
-| 文件上传 | 未发现 | 未发现上传 Controller、存储配置或附件表。 |
-| 数据库迁移 | 未发现 | 未发现 Flyway/Liquibase；只有手工 SQL 文件。 |
-| 环境隔离 | 部分存在但未形成仓库方案 | 有被忽略的 `application-local.yml`，但无 test/prod 配置和可提交模板。 |
-| API 文档 | 存在依赖和配置 | Springdoc/Knife4j 已启用，但端点和页面未做 HTTP 验证。 |
-| CI | 未发现 | 仓库中未发现 GitHub Actions、GitLab CI、Jenkins 等配置。 |
+- 服务端口为 8080；
+- 应用名为 `pharma-erp`；
+- 默认数据源指向 `127.0.0.1:3306/pharma_erp`；
+- 默认用户名为 `root`，提交配置中的密码为空；
+- JDBC 参数仍使用 `serverTimezone=Asia/Shanghai`；
+- MyBatis-Plus 全局配置仍启用 `deleted` 逻辑删除；
+- Springdoc 和 Knife4j 开关已启用；
+- 没有 Git 跟踪的 test/dev/prod Profile 配置。
 
-## 9. 数据库与 SQL 现状
+以上只是当前仓库开发默认配置。冻结数据库设计要求应用按 UTC 写入并校验会话时区，当前配置尚未完成对应迁移；本次也没有验证数据源连接、Profile 隔离或文档端点。
 
-### 9.1 脚本清单
+---
 
-仓库当前仅有：
+## 9. 当前数据库与 SQL 现状
 
-- `sql/001_create_drug_table.sql`
+### 9.1 仓库 SQL
 
-它只定义 `drug` 一张表，没有初始化演示数据。文件名前缀 `001_` 表示人工编号，仓库中没有工具证明它会自动按顺序执行。
+当前 `git ls-files 'sql/**'` 只有：
 
-### 9.2 `drug` 表关键设计
+```text
+sql/001_create_drug_table.sql
+```
 
-| 项目 | 当前定义 |
-| --- | --- |
-| 主键 | `id BIGINT AUTO_INCREMENT` |
-| 唯一约束 | `uk_drug_code (drug_code)` |
-| 普通索引 | `drug_name`、`generic_name`、`approval_no`、`manufacturer`、`status`、`deleted` |
-| 状态 | `VARCHAR(20)`，默认 `DISABLED` |
-| 时间 | `created_at` 默认当前时间；`updated_at` 使用 `ON UPDATE CURRENT_TIMESTAMP` |
-| 逻辑删除 | `deleted TINYINT`，默认 0 |
-| 引擎与字符集 | InnoDB、utf8mb4 |
+该文件只创建旧版 `drug` 单表，包含：
 
-### 9.3 Entity 对应关系
+- 自增 `BIGINT` 主键；
+- `drug_code` 唯一键；
+- `ENABLED` / `DISABLED` 状态；
+- `deleted` 逻辑删除字段；
+- InnoDB 和 `utf8mb4`。
 
-- `Drug` 使用 `@TableName("drug")`、自增 `@TableId` 和 `@TableLogic`。
-- Entity 的字段与 DDL 的 15 个列在命名和主要类型上明显对应。
-- Java 驼峰字段依赖 `application.yml` 中 `map-underscore-to-camel-case: true` 映射到下划线列。
-- DTO 长度限制与 SQL 中相应 `VARCHAR` 长度一致。
-- Java 枚举代码与 SQL 注释中的 `ENABLED/DISABLED` 对应。
+### 9.2 尚未形成正式基线
 
-### 9.4 当前缺口和限制
+- 51 张候选表尚未转成仓库 DDL；
+- `sys_user`、`sys_role`、`sys_permission` 等系统权限表尚不存在于 SQL；
+- `inventory_balance`、`inventory_ledger`、质量、销售、追溯和审计表尚不存在于 SQL；
+- 没有空库顺序执行的完整基线；
+- 没有仓库内数据库不变量验证脚本；
+- 没有证据证明旧 `001_create_drug_table.sql` 已在本次任务中执行；
+- 本次任务未连接、查询或修改任何 MySQL Schema。
 
-- 未发现数据库迁移工具、schema history、回滚说明或脚本校验和。
-- 脚本没有 `CREATE DATABASE`、`USE pharma_erp` 或 `IF NOT EXISTS`；执行目标和幂等策略未由脚本决定。
-- 表和 Entity 均没有 `version/@Version`、`created_by`、`updated_by`。
-- 数据库状态字段没有 CHECK 约束，正常 Service 路径使用枚举，但数据库层不能阻止其他写入方写入未知状态。
-- 已配置逻辑删除，但没有公开删除接口；软删除后药品编码是否永久不可复用尚未形成业务规则。
-- 本次没有连接 MySQL，无法确认数据库是否已经创建、脚本是否执行、实际表结构是否与仓库一致。
+旧 SQL 与冻结数据库设计冲突时：
 
-## 10. 配置现状与安全边界
+```text
+冻结文档 = 目标依据
+当前源码和旧 SQL = 实现现状
+```
 
-### 10.1 Git 跟踪配置
+不得把旧 `drug` 表直接扩展成全部新模型，也不得把旧单表 DDL 计入 51 张候选表已经实现。
 
-`backend/src/main/resources/application.yml`：
+---
 
-- 端口为 8080，应用名为 `pharma-erp`。
-- 数据源指向 `127.0.0.1:3306/pharma_erp`。
-- 提交配置使用 `root` 用户，密码为空。
-- 配置 MyBatis-Plus 驼峰转换和逻辑删除。
-- Springdoc 与 Knife4j 无条件启用。
+## 10. 当前构建与测试状态
 
-这只能视为当前本地开发默认值，仓库中没有 dev/test/prod 的明确部署策略。
+### 10.1 本次任务复验
 
-### 10.2 被忽略的本地配置
-
-审计工作机存在 `backend/src/main/resources/application-local.yml`：
-
-- 该文件被 `.gitignore` 排除，Git 历史中未发现此路径。
-- 自动检查只确认其数据库密码字段非空，具体值没有在审计输出或文档中回显、记录，也未确认该值是否为仍然有效的真实凭据。
-- Maven 资源阶段显示复制 2 个主资源；`target/classes/application-local.yml` 与源本地文件一致。
-- 因此已确认构建目录含本地配置。若未来打包，配置可能进入制品；本次未执行 package，JAR 内容尚未验证。
-
-## 11. 构建与测试状态
-
-### 11.1 审计环境
-
-- Maven 3.9.16
-- Java 17.0.17（Ubuntu OpenJDK）
-- Linux/WSL2
-
-环境证据：`mvn --version`。
-
-### 11.2 执行结果
-
-| 命令 | 结果 | 能证明什么 | 不能证明什么 |
+| 命令 | 本次结果 | 能证明什么 | 不能证明什么 |
 | --- | --- | --- | --- |
-| `mvn -f backend/pom.xml -DskipTests compile` | `BUILD SUCCESS` | 当前 Maven 增量编译成功。 | 不证明业务运行或数据库可用。 |
-| 受限沙箱内 `mvn -f backend/pom.xml test` | `BUILD FAILURE` | 失败原因是沙箱禁止网络接口/Mockito Byte Buddy 自附加 JVM。 | 该失败不是业务断言失败，也不能据此判定项目测试坏。 |
-| 经批准在沙箱外重试同一 test 命令 | `BUILD SUCCESS`；1 test，0 failures，0 errors | 默认 profile 下 Spring 上下文可加载。 | 不证明 HTTP、Mapper、MySQL、DDL、Drug CRUD 或业务规则正确。 |
+| `mvn -f backend/pom.xml -DskipTests compile` | `BUILD SUCCESS` | 当前后端能够编译。 | 不证明数据库、HTTP、Drug 业务或权限可用。 |
+| `mvn -f backend/pom.xml test` | `BUILD SUCCESS`；`Tests run: 1`，失败、错误和跳过均为 0 | 当前唯一的 Spring 上下文测试通过。 | 不证明 Drug 业务、DDL、权限、业务流程或系统整体可用。 |
 
-唯一测试为：
+最终成功测试结果：
 
-- `backend/src/test/java/com/fuhaha/pharmaerp/PharmaErpApplicationTests.java`
-- 使用 `@SpringBootTest`。
-- 测试方法 `contextLoads()` 没有断言、HTTP 请求、Mapper 调用或 SQL 查询。
-- 日志显示没有激活 profile，使用 `default` profile；没有证据表明测试取得了真实数据库连接。
+```text
+Tests run: 1
+Failures: 0
+Errors: 0
+Skipped: 0
 
-## 12. 已完成、部分完成和未开始
+测试类：
+com.fuhaha.pharmaerp.PharmaErpApplicationTests
+```
 
-### 12.1 已有明确代码和验证证据
+本次运行版本：
 
-- Spring Boot/Maven 后端骨架能够在当前环境编译。
-- 默认 profile 的 Spring 上下文测试通过。
-- 统一返回、分页模型、异常类和 MyBatis-Plus 分页配置已存在并通过编译。
-- Drug 模块具备完整的 Controller/DTO/Service/Mapper/Entity/VO/Enum 文件结构并通过编译。
-- `drug` DDL、唯一键、索引、时间和逻辑删除定义可由 SQL 静态确认。
+```text
+Java：17.0.19
+Spring Boot：3.3.5
+MyBatis-Plus 运行日志版本：3.5.9
+Maven：3.9.16
+```
 
-### 12.2 已有部分实现但未形成闭环
+### 10.2 自动化测试覆盖边界
 
-- 药品档案存在新增、查询、更新和启停代码，但没有业务自动化测试、真实 HTTP 或数据库验证。
-- 异常处理已建立框架，但 HTTP 状态语义、错误分类和服务端异常日志不完整。
-- Knife4j/OpenAPI 已配置，但文档端点尚未做冒烟测试。
-- 本地配置覆盖方式存在，但环境隔离、测试数据库和敏感配置管理没有形成可复制方案。
+当前仓库只有一个测试类和一个无业务断言的 `contextLoads()` 测试。
 
-### 12.3 仓库中尚未发现实现
+因此，当前准确结论只有：
 
-- 供应商、客户和证照档案。
-- 商品首营、资质审核和审批记录。
-- 采购订单、到货验收和采购入库。
-- 仓库、货位、`stock_batch` 和 `stock_movement`。
-- 销售订单、出库复核和销售流向。
-- 批号追溯、资质/效期预警。
-- 登录、角色权限、操作审计和修改前后值留痕。
-- Vue 前端工程。
-- CI、部署配置、监控、备份和恢复方案。
+```text
+当前后端能够编译；
+当前唯一的 Spring 上下文测试通过。
+```
 
-这些项目中部分出现在 `AGENTS.md` 的未来规划里，但不能因此写成“已有骨架”或“已经完成”。
+当前没有：
 
-## 13. 前端、CI、权限、审计和部署现状
+- Drug Controller、Service 或 Mapper 自动化测试；
+- 数据库 DDL 或约束测试；
+- 登录、权限、审计测试；
+- 首营、采购、收货、验收、库存、销售、出库或追溯测试；
+- HTTP 接口、浏览器或前端联调证据。
 
-| 领域 | 当前仓库证据 | 结论 |
-| --- | --- | --- |
-| 前端 | `frontend/` 为空；未发现 `package.json`、Vite 或 Vue 源码 | 尚未开始仓库内前端实现。 |
-| CI | 未发现 `.github/workflows`、GitLab CI、Jenkinsfile 等 | 仓库内没有自动编译/测试流水线。 |
-| 登录权限 | POM 和 Java 源码未发现认证授权组件或权限注解 | 尚未实现。 |
-| 审计 | 未发现 `audit_log`、当前操作人或前后值记录 | 尚未实现。 |
-| 部署 | 未发现 Dockerfile、Compose、Kubernetes、部署脚本或运行手册 | 尚未形成可重复部署方案。 |
-| 备份恢复 | 未发现数据库备份、恢复或演练说明 | 尚未设计或至少未提交到仓库。 |
-| 监控就绪 | `/health` 只返回固定内容，无 Actuator 或数据库 readiness | 只能作为简单存活接口代码，未验证实际部署效果。 |
+---
 
-## 14. 当前项目阶段结论
+## 11. 本地数据库环境验证状态
 
-当前项目应归类为：**后端原型**。
+用户已于 2026-07-28 完成本地手工机制验证：
 
-判断依据：
+| 项目 | 用户提供的本地验证结果 |
+| --- | --- |
+| MySQL 客户端和服务端 | 8.4.10 Homebrew |
+| 存储引擎 | InnoDB |
+| 字符集 | `utf8mb4` |
+| 排序规则 | `utf8mb4_0900_ai_ci` |
+| 严格 SQL 模式 | 已启用 |
+| 事务隔离级别 | `REPEATABLE-READ` |
+| 新会话时区 | `+00:00` |
+| CHECK 约束 | 手工验证通过 |
+| marker 唯一性 | 手工验证通过 |
+| 两连接并发唯一性 | 手工验证通过 |
 
-1. 已有可编译的 Spring Boot 后端骨架和一个药品档案纵向代码样例。
-2. 唯一自动化测试只验证 Spring 上下文加载。
-3. 未验证真实数据库、HTTP 接口、事务和业务规则。
-4. P0 所需的大多数药品批发模块尚未在仓库中出现。
-5. 前端、认证授权、审计、CI 和部署能力尚未实现。
+证据等级必须准确表述为：
 
-因此，本项目当前不能表述为：
+> 用户已完成本地手工机制验证，但相关 DDL 和验证过程尚未形成仓库内可重复运行的正式脚本。
 
-- 已完成药品 ERP；
-- 已经符合 GSP；
-- 已通过药品监管验收；
-- 可以正式商用；
-- 已具备试运行条件。
+本次 `DOC-STATE-02` 没有复验这些数据库机制，也没有把手工验证结果扩大为 51 张表已经创建或数据库基线已经验收。
 
-## 15. 未确认事项
+---
 
-以下内容无法从当前仓库和本次安全检查中确认：
+## 12. 设计与实现差距
 
-1. `pharma_erp` 数据库是否已实际创建。
-2. `001_create_drug_table.sql` 是否已执行，以及实际表结构是否与脚本一致。
-3. Drug 接口是否曾通过 curl、Knife4j、Apifox 或前端真实调用。
-4. 应用在当前机器上长期启动后，`/health` 和 `/doc.html` 是否可访问。
-5. 本地配置中的数据库是否仅为开发库；本次没有使用或验证该凭据。
-6. 是否存在未提供的独立前端仓库、部署仓库或 CI 平台配置。
-7. Git 远端服务器是否有本次未 fetch 的更新或服务器端规则。
-8. 目标企业所在省份及具体监管口径。
-9. 目标企业是否经营冷藏冷冻药品、特殊管理药品或其他特殊品类。
-10. 供应商、客户、商品首营、证照和数据留存的详细业务规则及正式法规依据。
-11. 演示环境、演示账号、初始化数据及演示数据重置方案。
-12. 正式部署目标、数据库版本、备份周期、恢复目标和日志留存要求。
+| 领域 | 冻结设计目标 | 当前实现事实 | 结论 |
+| --- | --- | --- | --- |
+| 系统权限 | 用户、角色、权限、分配审批和后端阻断 | POM、Java、SQL 中均未发现登录、用户、角色、权限或授权实现 | 未实现；对应 TD-009 |
+| 审计 | 状态历史、成功/失败/越权审计、受控更正 | 未发现审计 Entity、表、Service 或当前操作人 | 未实现；对应 TD-010 |
+| Drug | 新 Drug 状态和字段；首营与关键字段受控变更 | 旧 `ENABLED/DISABLED`、`deleted/@TableLogic` 模型 | 尚未迁移；对应 TD-011、TD-012 |
+| 首营与准入 | 供应商首营、品种首营、客户资质 | 无对应 Java 和 SQL | 未实现 |
+| 采购 | 采购订单必须经过有效准入 | 无对应 Java 和 SQL | 未实现 |
+| 收货与验收 | 收货和逐批验收分离 | 无对应 Java 和 SQL | 未实现 |
+| 批次库存 | 批号库存、库存流水、效期、质量状态和并发控制 | 无 `inventory_balance`、`inventory_ledger` 或当前规则要求的正式表/代码 | 未实现 |
+| 销售与出库 | 客户动态校验、批次占用、独立出库复核 | 无对应 Java 和 SQL | 未实现 |
+| 批号追溯 | 供应商至客户全过程追溯 | 无对应 Java 和 SQL | 未实现 |
+| 广东增强 | 追溯码本地核验、Mock 请求和回执 | 无 Profile、Rule Pack、Adapter 或 Mock 实现 | 未实现 |
+| 质量事件 | 事件、冻结、调查、审批和处置 | 无对应 Java 和 SQL | 未实现 |
+| 前端 | Vue 3 + Vite + Element Plus 演示工程 | `frontend/` 没有 Git 跟踪文件 | 未实现；对应 TD-017 |
+| 备份恢复 | 备份计划、执行、隔离恢复和核对 | 无对应脚本、表、代码或恢复记录 | 未实现；对应 TD-018 |
+| 数据库基线 | 51 张候选表分阶段正式落地 | 只有旧版 Drug 单表脚本 | 未实现；对应 TD-013 |
+| 自动化验收 | 正常、阻断、权限、审计、数据库和浏览器证据 | 只有 Spring 上下文测试 | 未实现；Drug 测试缺口对应 TD-003 |
 
-涉及业务或法规的问题应在后续 `OPEN_QUESTIONS.md`、`URS.md`、`COMPLIANCE_MATRIX.md` 等 Goal 中确认，不能用技术推测代替。
+---
+
+## 13. 当前风险与限制
+
+### 13.1 主要风险
+
+1. **设计与实现差距很大。** 冻结文档已经描述完整 Demo 逻辑，但仓库实现仍停留在旧 Drug 原型，不能以文档完成度推断系统完成度。
+2. **旧 Drug 模型不能继续扩展为目标模型。** `ENABLED/DISABLED`、逻辑删除和旧字段不足以表达首营、效期、追溯和受控变更。
+3. **数据库基线尚未实施。** 51 张候选表、约束、事务和并发规则没有仓库 DDL 与可重复验证脚本。
+4. **权限和审计尚未形成基础。** 在完成对应基线前，不应开始依赖用户身份、审批链或审计的业务实现。
+5. **自动化测试证据极薄。** 当前测试只证明 Spring 上下文加载，不能保护 Drug 或未来数据库迁移。
+6. **没有业务用户可操作的前端。** 当前不能通过浏览器验收业务闭环。
+7. **不能宣称合规或可用。** 当前没有业务闭环、权限、审计、数据库验收、浏览器验收或计算机系统验证证据。
+
+### 13.2 文档风险
+
+`docs/TECH_DEBT.md` 仍是 2026-07-18、`cad7ff6` 的旧技术债快照，其中部分事实已经过期。例如 TD-015 中“核心设计文档仍为空”的结论已被当前冻结设计取代。本文记录当前事实；技术债状态和措辞需要在独立 Goal 中同步，不得继续把旧条目全部当成当前结论。
+
+当前仍为空的 `COMPLIANCE_MATRIX.md` 表明合规要求、设计、实现和测试证据尚未形成仓库内正式追踪矩阵。
+
+---
+
+## 14. 当前下一 Goal
+
+当前下一 Goal：
+
+```text
+DB-BASE-01：系统权限数据库基线
+```
+
+暂定范围：
+
+```text
+sys_user
+sys_role
+sys_permission
+sys_user_role
+sys_role_permission
+sys_role_assignment
+```
+
+该 Goal 当前只是下一步计划，不表示上述表已经实现。
+
+当前阶段限制：
+
+- 不得一次生成全部 51 张表；
+- 不得在该 Goal 重构 Drug 模块；
+- 不得开始采购、库存、销售或追溯业务实现；
+- 不得修改冻结设计文档；
+- 不得把旧 Drug 表直接扩展成全部新模型。
+
+`DB-BASE-01` 正式启动时，仍需按 `AGENTS.md` 和该 Goal 的明确文件、数据库、配置与测试范围执行。
+
+---
+
+## 15. CURRENT_STATE 更新规则
+
+1. 本文是动态事实基线，不是永久不变的历史报告。
+2. 每次会改变“当前实现、当前验证或当前阶段”的 Goal 完成后，应评估是否同步更新本文。
+3. 更新时必须记录快照日期、工作分支、主线冻结基线或 Goal 起始基线、任务开始时工作区状态、证据来源和实际测试结果。
+4. 必须继续区分设计冻结、文件存在、代码存在、编译、自动化测试、手工验证、仓库可重复验证、未实现和未验证。
+5. 冻结文档中的目标表、状态、权限和流程，在 DDL、Java、测试和验收证据出现前不得写成已实现。
+6. 用户提供的本地手工验证必须标识为本地手工证据；只有验证脚本和断言进入仓库后，才能升级为仓库内可重复验证。
+7. Maven、数据库、HTTP 和浏览器验证必须记录真实命令、结果和覆盖边界；失败不得改写为成功。
+8. 旧实现与冻结设计冲突时，以冻结设计作为目标、以源码和 SQL 作为现状，不能修改冻结文档迁就旧代码。
+9. 已过期结论应直接修正或删除，不为“保留历史”长期留在动态基线中；历史由 Git 保存。
+10. 本文不得把 Demo 描述为已合规、已通过 GSP、可商用或可承载真实药品经营数据。
+
+---
+
+**文档结束**
