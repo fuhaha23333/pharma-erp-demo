@@ -1,7 +1,7 @@
 
 # DB-BASE-01：系统权限数据库基线
 
-> **文档定位：** 本文件是 `DB-BASE-01` 的正式实施规格草案，用于关闭六张系统权限表物理字段与角色—权限关系的实施阻塞。它不是DDL、不是已完成证明，也不修改冻结业务设计。
+> **文档定位：** 本文件是 `DB-BASE-01` 的正式实施规格，用于关闭六张系统权限表物理字段、角色—权限关系和MySQL物理约束命名的实施阻塞。它不是DDL、不是已完成证明，也不修改冻结业务设计。
 
 ## 1. 文档信息
 
@@ -315,7 +315,7 @@ backend/src/main/resources/application.yml
 - 状态：`VARCHAR`加命名CHECK，不使用MySQL ENUM；
 - 业务时刻：`DATETIME(3)`；
 - 外键默认：`ON DELETE RESTRICT ON UPDATE RESTRICT`；
-- 所有约束和索引显式命名；
+- 主键遵循MySQL固定物理名称`PRIMARY`；其余唯一约束、CHECK、普通索引和外键必须显式命名；`pk_*`仅作为本文档逻辑标签；
 - 正常验证保持外键检查开启；
 - DDL中不得创建本Goal范围外表；
 - CHECK只表达同一行内、确定性的条件，不引用其他表，不使用`NOW()`等非确定函数；
@@ -433,77 +433,79 @@ backend/src/main/resources/application.yml
 
 ## 10. 约束、索引与外键
 
-| 表                  | 约束/索引名                               | 定义                                                                                                         | 目的                             |
-| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------- |
-| sys_user            | pk_sys_user                               | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_user            | uk_sys_user_username                      | UNIQUE (username)                                                                                            | 用户名唯一                       |
-| sys_user            | ck_sys_user_status                        | status IN ('ACTIVE','DISABLED')                                                                              | 账号状态                         |
-| sys_user            | ck_sys_user_username_nonblank             | CHAR_LENGTH(TRIM(username)) > 0                                                                              | 用户名非空白                     |
-| sys_user            | ck_sys_user_display_name_nonblank         | CHAR_LENGTH(TRIM(display_name)) > 0                                                                          | 显示名非空白                     |
-| sys_user            | ck_sys_user_password_hash_nonblank        | CHAR_LENGTH(TRIM(password_hash)) > 0                                                                         | 哈希非空白                       |
-| sys_user            | idx_sys_user_status                       | INDEX (status)                                                                                               | 状态查询                         |
-| sys_user            | fk_sys_user_created_by                    | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 自引用                           |
-| sys_user            | fk_sys_user_updated_by                    | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 自引用                           |
-| sys_role            | pk_sys_role                               | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_role            | uk_sys_role_code                          | UNIQUE (role_code)                                                                                           | 角色代码唯一                     |
-| sys_role            | uk_sys_role_name                          | UNIQUE (role_name)                                                                                           | 中文名称唯一                     |
-| sys_role            | ck_sys_role_risk_level                    | risk_level IN ('NORMAL','HIGH')                                                                              | 风险级别                         |
-| sys_role            | ck_sys_role_status                        | status IN ('ACTIVE','DISABLED')                                                                              | 角色状态                         |
-| sys_role            | ck_sys_role_is_builtin                    | is_builtin IN (0,1)                                                                                          | 内置标识                         |
-| sys_role            | idx_sys_role_status                       | INDEX (status)                                                                                               | 状态查询                         |
-| sys_role            | fk_sys_role_created_by                    | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
-| sys_role            | fk_sys_role_updated_by                    | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
-| sys_permission      | pk_sys_permission                         | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_permission      | uk_sys_permission_code                    | UNIQUE (permission_code)                                                                                     | 权限代码唯一                     |
-| sys_permission      | ck_sys_permission_module                  | module_code IN ('SYS','MD','QA','PO','RC','ACPT','INV','SO','OUT','TRACE','QE','GD','DEMO','BAK')            | 模块代码                         |
-| sys_permission      | ck_sys_permission_execution_mode          | execution_mode IN ('ROLE','ROLE_AND_SYSTEM','SYSTEM','PROHIBITED','NOT_OPEN')                                | 执行模式                         |
-| sys_permission      | ck_sys_permission_is_builtin              | is_builtin IN (0,1)                                                                                          | 内置标识                         |
-| sys_permission      | idx_sys_permission_module                 | INDEX (module_code)                                                                                          | 模块查询                         |
-| sys_permission      | idx_sys_permission_mode                   | INDEX (execution_mode)                                                                                       | 模式查询                         |
-| sys_permission      | fk_sys_permission_created_by              | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
-| sys_permission      | fk_sys_permission_updated_by              | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
-| sys_role_assignment | pk_sys_role_assignment                    | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_role_assignment | uk_sys_role_assignment_no                 | UNIQUE (assignment_no)                                                                                       | 业务编号唯一                     |
-| sys_role_assignment | ck_sys_role_assignment_type               | assignment_type IN ('GRANT','REVOKE')                                                                        | 申请类型                         |
-| sys_role_assignment | ck_sys_role_assignment_approval           | approval_required IN (0,1)                                                                                   | 是否需批准                       |
-| sys_role_assignment | ck_sys_role_assignment_status             | status IN ('PENDING_REVIEW','PENDING_APPROVAL','PENDING_EXECUTION','REJECTED','EXECUTED','EXECUTION_FAILED') | 状态集合                         |
-| sys_role_assignment | ck_sys_role_assignment_valid_period       | valid_to IS NULL OR (valid_from IS NOT NULL AND valid_from <= valid_to)                                      | 有效期                           |
-| sys_role_assignment | ck_sys_role_assignment_creator            | created_by = requested_by                                                                                    | 创建人与申请人一致               |
-| sys_role_assignment | ck_sys_role_assignment_review_pair        | (reviewed_by IS NULL) = (reviewed_at IS NULL)                                                                | 审核人时间成对                   |
-| sys_role_assignment | ck_sys_role_assignment_approve_pair       | (approved_by IS NULL) = (approved_at IS NULL)                                                                | 批准人时间成对                   |
-| sys_role_assignment | ck_sys_role_assignment_execute_pair       | (executed_by IS NULL) = (executed_at IS NULL)                                                                | 执行人时间成对                   |
-| sys_role_assignment | ck_sys_role_assignment_review_sod         | reviewed_by IS NULL OR (reviewed_by <> requested_by AND reviewed_by <> target_user_id)                       | 审核职责分离                     |
-| sys_role_assignment | ck_sys_role_assignment_approve_sod        | approved_by IS NULL OR (approved_by <> requested_by AND approved_by <> target_user_id)                       | 批准职责分离                     |
-| sys_role_assignment | ck_sys_role_assignment_review_approve_sod | reviewed_by IS NULL OR approved_by IS NULL OR reviewed_by <> approved_by                                     | 审核与批准分离                   |
-| sys_role_assignment | ck_sys_role_assignment_execute_sod        | approved_by IS NULL OR executed_by IS NULL OR approved_by <> executed_by                                     | 批准与执行分离                   |
-| sys_role_assignment | idx_sys_role_assignment_target_status     | INDEX (target_user_id, status)                                                                               | 用户任务查询                     |
-| sys_role_assignment | idx_sys_role_assignment_role_status       | INDEX (role_id, status)                                                                                      | 角色任务查询                     |
-| sys_role_assignment | idx_sys_role_assignment_status_requested  | INDEX (status, requested_at)                                                                                 | 队列查询                         |
-| sys_role_assignment | fk_sys_role_assignment_target             | target_user_id -> sys_user.id RESTRICT/RESTRICT                                                              | 目标用户                         |
-| sys_role_assignment | fk_sys_role_assignment_role               | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
-| sys_role_assignment | fk_sys_role_assignment_requested          | requested_by -> sys_user.id RESTRICT/RESTRICT                                                                | 申请人                           |
-| sys_role_assignment | fk_sys_role_assignment_reviewed           | reviewed_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 审核人                           |
-| sys_role_assignment | fk_sys_role_assignment_approved           | approved_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 批准人                           |
-| sys_role_assignment | fk_sys_role_assignment_executed           | executed_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 执行人                           |
-| sys_role_assignment | fk_sys_role_assignment_created            | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
-| sys_role_assignment | fk_sys_role_assignment_updated            | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
-| sys_user_role       | pk_sys_user_role                          | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_user_role       | uk_sys_user_role                          | UNIQUE (user_id, role_id)                                                                                    | 当前角色关系唯一                 |
-| sys_user_role       | uk_sys_user_role_source_assignment        | UNIQUE (source_assignment_id)                                                                                | 一个分配记录最多驱动一个当前关系 |
-| sys_user_role       | ck_sys_user_role_status                   | status IN ('ACTIVE','REVOKED','EXPIRED')                                                                     | 关系状态                         |
-| sys_user_role       | ck_sys_user_role_valid_period             | valid_to IS NULL OR valid_from <= valid_to                                                                   | 有效期                           |
-| sys_user_role       | idx_sys_user_role_user_status             | INDEX (user_id, status, valid_to)                                                                            | 用户有效角色查询                 |
-| sys_user_role       | idx_sys_user_role_role_status             | INDEX (role_id, status, valid_to)                                                                            | 角色成员查询                     |
-| sys_user_role       | fk_sys_user_role_user                     | user_id -> sys_user.id RESTRICT/RESTRICT                                                                     | 用户                             |
-| sys_user_role       | fk_sys_user_role_role                     | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
-| sys_user_role       | fk_sys_user_role_assignment               | source_assignment_id -> sys_role_assignment.id RESTRICT/RESTRICT                                             | 来源申请                         |
-| sys_user_role       | fk_sys_user_role_created_by               | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
-| sys_user_role       | fk_sys_user_role_updated_by               | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
-| sys_role_permission | pk_sys_role_permission                    | PRIMARY KEY (id)                                                                                             | 主键                             |
-| sys_role_permission | uk_sys_role_permission                    | UNIQUE (role_id, permission_id)                                                                              | 角色权限唯一                     |
-| sys_role_permission | idx_sys_role_permission_permission        | INDEX (permission_id)                                                                                        | 反向查询                         |
-| sys_role_permission | fk_sys_role_permission_role               | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
-| sys_role_permission | fk_sys_role_permission_permission         | permission_id -> sys_permission.id RESTRICT/RESTRICT                                                         | 权限                             |
+> **MySQL主键命名说明：** 六张表都使用`PRIMARY KEY (id)`。在MySQL 8.4的索引元数据中，主键名称固定为`PRIMARY`，不能物理命名为`pk_sys_user`等名称。下表中的`pk_*`仅用于文档阅读、审查和跨数据库概念对照，不得写入需要在MySQL元数据中出现的验收条件。
+
+| 表                  | 物理名称 / 文档逻辑标签                     | 定义                                                                                                         | 目的                             |
+| ------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| sys_user            | PRIMARY（逻辑标签：pk_sys_user）            | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_user            | uk_sys_user_username                        | UNIQUE (username)                                                                                            | 用户名唯一                       |
+| sys_user            | ck_sys_user_status                          | status IN ('ACTIVE','DISABLED')                                                                              | 账号状态                         |
+| sys_user            | ck_sys_user_username_nonblank               | CHAR_LENGTH(TRIM(username)) > 0                                                                              | 用户名非空白                     |
+| sys_user            | ck_sys_user_display_name_nonblank           | CHAR_LENGTH(TRIM(display_name)) > 0                                                                          | 显示名非空白                     |
+| sys_user            | ck_sys_user_password_hash_nonblank          | CHAR_LENGTH(TRIM(password_hash)) > 0                                                                         | 哈希非空白                       |
+| sys_user            | idx_sys_user_status                         | INDEX (status)                                                                                               | 状态查询                         |
+| sys_user            | fk_sys_user_created_by                      | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 自引用                           |
+| sys_user            | fk_sys_user_updated_by                      | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 自引用                           |
+| sys_role            | PRIMARY（逻辑标签：pk_sys_role）            | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_role            | uk_sys_role_code                            | UNIQUE (role_code)                                                                                           | 角色代码唯一                     |
+| sys_role            | uk_sys_role_name                            | UNIQUE (role_name)                                                                                           | 中文名称唯一                     |
+| sys_role            | ck_sys_role_risk_level                      | risk_level IN ('NORMAL','HIGH')                                                                              | 风险级别                         |
+| sys_role            | ck_sys_role_status                          | status IN ('ACTIVE','DISABLED')                                                                              | 角色状态                         |
+| sys_role            | ck_sys_role_is_builtin                      | is_builtin IN (0,1)                                                                                          | 内置标识                         |
+| sys_role            | idx_sys_role_status                         | INDEX (status)                                                                                               | 状态查询                         |
+| sys_role            | fk_sys_role_created_by                      | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
+| sys_role            | fk_sys_role_updated_by                      | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
+| sys_permission      | PRIMARY（逻辑标签：pk_sys_permission）      | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_permission      | uk_sys_permission_code                      | UNIQUE (permission_code)                                                                                     | 权限代码唯一                     |
+| sys_permission      | ck_sys_permission_module                    | module_code IN ('SYS','MD','QA','PO','RC','ACPT','INV','SO','OUT','TRACE','QE','GD','DEMO','BAK')            | 模块代码                         |
+| sys_permission      | ck_sys_permission_execution_mode            | execution_mode IN ('ROLE','ROLE_AND_SYSTEM','SYSTEM','PROHIBITED','NOT_OPEN')                                | 执行模式                         |
+| sys_permission      | ck_sys_permission_is_builtin                | is_builtin IN (0,1)                                                                                          | 内置标识                         |
+| sys_permission      | idx_sys_permission_module                   | INDEX (module_code)                                                                                          | 模块查询                         |
+| sys_permission      | idx_sys_permission_mode                     | INDEX (execution_mode)                                                                                       | 模式查询                         |
+| sys_permission      | fk_sys_permission_created_by                | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
+| sys_permission      | fk_sys_permission_updated_by                | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
+| sys_role_assignment | PRIMARY（逻辑标签：pk_sys_role_assignment） | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_role_assignment | uk_sys_role_assignment_no                   | UNIQUE (assignment_no)                                                                                       | 业务编号唯一                     |
+| sys_role_assignment | ck_sys_role_assignment_type                 | assignment_type IN ('GRANT','REVOKE')                                                                        | 申请类型                         |
+| sys_role_assignment | ck_sys_role_assignment_approval             | approval_required IN (0,1)                                                                                   | 是否需批准                       |
+| sys_role_assignment | ck_sys_role_assignment_status               | status IN ('PENDING_REVIEW','PENDING_APPROVAL','PENDING_EXECUTION','REJECTED','EXECUTED','EXECUTION_FAILED') | 状态集合                         |
+| sys_role_assignment | ck_sys_role_assignment_valid_period         | valid_to IS NULL OR (valid_from IS NOT NULL AND valid_from <= valid_to)                                      | 有效期                           |
+| sys_role_assignment | ck_sys_role_assignment_creator              | created_by = requested_by                                                                                    | 创建人与申请人一致               |
+| sys_role_assignment | ck_sys_role_assignment_review_pair          | (reviewed_by IS NULL) = (reviewed_at IS NULL)                                                                | 审核人时间成对                   |
+| sys_role_assignment | ck_sys_role_assignment_approve_pair         | (approved_by IS NULL) = (approved_at IS NULL)                                                                | 批准人时间成对                   |
+| sys_role_assignment | ck_sys_role_assignment_execute_pair         | (executed_by IS NULL) = (executed_at IS NULL)                                                                | 执行人时间成对                   |
+| sys_role_assignment | ck_sys_role_assignment_review_sod           | reviewed_by IS NULL OR (reviewed_by <> requested_by AND reviewed_by <> target_user_id)                       | 审核职责分离                     |
+| sys_role_assignment | ck_sys_role_assignment_approve_sod          | approved_by IS NULL OR (approved_by <> requested_by AND approved_by <> target_user_id)                       | 批准职责分离                     |
+| sys_role_assignment | ck_sys_role_assignment_review_approve_sod   | reviewed_by IS NULL OR approved_by IS NULL OR reviewed_by <> approved_by                                     | 审核与批准分离                   |
+| sys_role_assignment | ck_sys_role_assignment_execute_sod          | approved_by IS NULL OR executed_by IS NULL OR approved_by <> executed_by                                     | 批准与执行分离                   |
+| sys_role_assignment | idx_sys_role_assignment_target_status       | INDEX (target_user_id, status)                                                                               | 用户任务查询                     |
+| sys_role_assignment | idx_sys_role_assignment_role_status         | INDEX (role_id, status)                                                                                      | 角色任务查询                     |
+| sys_role_assignment | idx_sys_role_assignment_status_requested    | INDEX (status, requested_at)                                                                                 | 队列查询                         |
+| sys_role_assignment | fk_sys_role_assignment_target               | target_user_id -> sys_user.id RESTRICT/RESTRICT                                                              | 目标用户                         |
+| sys_role_assignment | fk_sys_role_assignment_role                 | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
+| sys_role_assignment | fk_sys_role_assignment_requested            | requested_by -> sys_user.id RESTRICT/RESTRICT                                                                | 申请人                           |
+| sys_role_assignment | fk_sys_role_assignment_reviewed             | reviewed_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 审核人                           |
+| sys_role_assignment | fk_sys_role_assignment_approved             | approved_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 批准人                           |
+| sys_role_assignment | fk_sys_role_assignment_executed             | executed_by -> sys_user.id RESTRICT/RESTRICT                                                                 | 执行人                           |
+| sys_role_assignment | fk_sys_role_assignment_created              | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
+| sys_role_assignment | fk_sys_role_assignment_updated              | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
+| sys_user_role       | PRIMARY（逻辑标签：pk_sys_user_role）       | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_user_role       | uk_sys_user_role                            | UNIQUE (user_id, role_id)                                                                                    | 当前角色关系唯一                 |
+| sys_user_role       | uk_sys_user_role_source_assignment          | UNIQUE (source_assignment_id)                                                                                | 一个分配记录最多驱动一个当前关系 |
+| sys_user_role       | ck_sys_user_role_status                     | status IN ('ACTIVE','REVOKED','EXPIRED')                                                                     | 关系状态                         |
+| sys_user_role       | ck_sys_user_role_valid_period               | valid_to IS NULL OR valid_from <= valid_to                                                                   | 有效期                           |
+| sys_user_role       | idx_sys_user_role_user_status               | INDEX (user_id, status, valid_to)                                                                            | 用户有效角色查询                 |
+| sys_user_role       | idx_sys_user_role_role_status               | INDEX (role_id, status, valid_to)                                                                            | 角色成员查询                     |
+| sys_user_role       | fk_sys_user_role_user                       | user_id -> sys_user.id RESTRICT/RESTRICT                                                                     | 用户                             |
+| sys_user_role       | fk_sys_user_role_role                       | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
+| sys_user_role       | fk_sys_user_role_assignment                 | source_assignment_id -> sys_role_assignment.id RESTRICT/RESTRICT                                             | 来源申请                         |
+| sys_user_role       | fk_sys_user_role_created_by                 | created_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 创建人                           |
+| sys_user_role       | fk_sys_user_role_updated_by                 | updated_by -> sys_user.id RESTRICT/RESTRICT                                                                  | 更新人                           |
+| sys_role_permission | PRIMARY（逻辑标签：pk_sys_role_permission） | PRIMARY KEY (id)                                                                                             | 主键                             |
+| sys_role_permission | uk_sys_role_permission                      | UNIQUE (role_id, permission_id)                                                                              | 角色权限唯一                     |
+| sys_role_permission | idx_sys_role_permission_permission          | INDEX (permission_id)                                                                                        | 反向查询                         |
+| sys_role_permission | fk_sys_role_permission_role                 | role_id -> sys_role.id RESTRICT/RESTRICT                                                                     | 角色                             |
+| sys_role_permission | fk_sys_role_permission_permission           | permission_id -> sys_permission.id RESTRICT/RESTRICT                                                         | 权限                             |
 
 ### 10.1 建表顺序
 
@@ -790,7 +792,7 @@ WAREHOUSE_OPERATOR
 
 - 设置或验证会话时区为`+00:00`；
 - 创建六张表；
-- 按第9、10章使用精确字段和约束名；
+- 按第9、10章使用精确字段；六张表主键统一写为`PRIMARY KEY (id)`，其物理名称由MySQL固定为`PRIMARY`；除主键外，其余唯一约束、CHECK、普通索引和外键使用第10章的精确名称；
 - 每表显式指定InnoDB和utf8mb4_0900_ai_ci；
 - 不创建Schema；
 - 不创建范围外对象；
@@ -839,7 +841,7 @@ WAREHOUSE_OPERATOR
 4. 表名集合与本Goal完全一致；
 5. 六表引擎全部为InnoDB；
 6. 列定义、NULL、默认值与第9章一致；
-7. 约束、索引和外键名称与第10章一致；
+7. 六张表主键列均为`id`，`SHOW INDEX`和`INFORMATION_SCHEMA.STATISTICS`中的主键名称均为`PRIMARY`；除主键外，唯一约束、CHECK、普通索引和外键名称与第10章一致；
 8. 不存在`drug`或其余45张候选表；
 9. 外键检查保持开启；
 10. `SHOW CREATE TABLE`可见命名CHECK和唯一约束。
@@ -1213,7 +1215,8 @@ Codex最终回复必须列出：
 - 阶段性禁止与动作族绝对禁止的映射规则已分离；
 - 角色—权限关系总数为233；
 - 10个角色的关系数合计为233；
-- 约束和索引名称均未超过MySQL标识符长度限制；
+- 除主键外的显式约束和索引名称均未超过MySQL标识符长度限制；
+- 六张表主键物理名称已按MySQL 8.4固定为`PRIMARY`，`pk_*`仅保留为文档逻辑标签；
 - 六表建表依赖顺序闭合；
 - 粗粒度RBAC与后续Service业务守卫边界已明确；
 - 跨表状态不变量未被错误表述为CHECK已保证；
