@@ -1,3 +1,4 @@
+
 # AGENTS.md
 
 ## 1. 当前项目阶段
@@ -144,11 +145,12 @@ GD_DEMO_PROFILE
 * 批号库存与库存流水；
 * 客户准入；
 * 销售和出库复核；
+* 基础发运与签收；
 * 批号级追溯；
 * 基础权限；
 * 审计；
 * 效期与质量状态控制；
-* 演示数据初始化与重置。
+* 固定测试与演示种子数据，不含一键重置。
 
 ### M2：广东增强与质量展示
 
@@ -156,7 +158,7 @@ M1通过后再实现：
 
 * 广东追溯码 Mock；
 * 质量事件和库存冻结；
-* 简化运输与签收；
+* 运输异常、增强签收与广东展示；
 * 广东 Profile 展示。
 
 ### M3：演示加固
@@ -237,6 +239,35 @@ modules/integration
 
 未经明确Goal批准，不得进行大规模包重命名或目录迁移。
 
+## 7.1 现有 Drug 原型与冻结设计的关系
+
+以下内容属于旧数据库设计下的早期原型：
+
+```text
+sql/001_create_drug_table.sql
+backend/src/main/java/com/fuhaha/pharmaerp/modules/master/drug/
+```
+
+该原型只能证明当前 Spring Boot、MyBatis-Plus 和基础 CRUD 骨架存在并能编译，不代表已经符合冻结业务和数据库设计。当前源码和旧 SQL 只用于说明实现现状；当旧实现与以下冻结文档冲突时，以冻结文档作为目标依据：
+
+```text
+docs/BUSINESS_STATE_MACHINE.md
+docs/ROLE_PERMISSION_MATRIX.md
+docs/DATABASE_DESIGN_DEMO.md
+```
+
+不得修改冻结文档迁就旧代码，也不得把旧 Drug 模块作为新模块的数据模型或状态设计范例。尤其不得默认复制：
+
+* 旧原型的 `ENABLED / DISABLED` 二值状态组合；
+* `deleted`；
+* `@TableLogic`；
+* 旧 `drug` 表字段模型；
+* 以通用删除代替业务停用的设计方式。
+
+Drug 模块只能在明确授权的独立 Goal 中迁移。非 Drug Goal 不得顺带修改或重构 Drug 模块；发现当前 Goal 必须修改 Drug 时，应停止并报告所需授权。
+
+不得把旧 `drug` 表直接扩展为全部 51 张候选表。冻结文档未定义的状态、角色、权限、表和业务路径不得自行新增。
+
 ## 8. 核心业务硬规则
 
 以下规则不得为了快速演示而绕过：
@@ -249,7 +280,7 @@ modules/integration
 6. 验收应逐批执行；
 7. 验收合格后才能形成合格批号库存；
 8. 库存必须按药品、批号、有效期、仓库、库位和质量状态管理；
-9. 每次库存数量变化必须生成 `stock_movement`；
+9. 每次库存数量变化必须生成 `inventory_ledger`；
 10. 状态变化必须留下质量状态变更和审计记录；
 11. 待验、冻结、不合格和过期库存不得销售和出库；
 12. 销售出库必须经过出库复核；
@@ -389,16 +420,19 @@ pharma_erp
 9. 已执行的迁移脚本不得直接改写；
 10. 禁止直接修改库存总数量而不生成流水。
 
-统一使用：
+冻结库存核心表统一使用：
+
+```text
+drug_batch         药品批次主数据
+inventory_balance  当前批号库存余额
+inventory_ledger   库存数量与质量变化流水
+```
+
+不得新建同义表，例如：
 
 ```text
 stock_batch
 stock_movement
-```
-
-不得新建同义的：
-
-```text
 stock_transaction
 ```
 
