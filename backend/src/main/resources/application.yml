@@ -6,9 +6,11 @@ spring:
     name: pharma-erp
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/pharma_erp?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password:
+    url: jdbc:mysql://127.0.0.1:3306/pharma_erp?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    hikari:
+      connection-init-sql: SET time_zone = '+00:00'
 
 mybatis-plus:
   configuration:
@@ -29,3 +31,12 @@ springdoc:
 
 knife4j:
   enable: true
+
+pharma:
+  bootstrap:
+    enabled: ${PHARMA_BOOTSTRAP_ENABLED:false}
+    username: ${PHARMA_BOOTSTRAP_USERNAME:admin}
+    display-name: ${PHARMA_BOOTSTRAP_DISPLAY_NAME:系统管理员}
+    password: ${PHARMA_BOOTSTRAP_PASSWORD:}
+    department-code: ${PHARMA_BOOTSTRAP_DEPARTMENT_CODE:ROOT}
+    department-name: ${PHARMA_BOOTSTRAP_DEPARTMENT_NAME:示例药品经营企业}
