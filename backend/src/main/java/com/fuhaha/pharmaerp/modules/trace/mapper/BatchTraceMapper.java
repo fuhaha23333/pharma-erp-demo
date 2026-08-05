@@ -93,7 +93,7 @@ public interface BatchTraceMapper {
                 CAST(e.event_data AS CHAR) AS event_data,
                 e.operator_id,
                 u.username AS operator_username,
-                u.real_name AS operator_real_name,
+                u.display_name AS operator_real_name,
                 e.occurred_at
             FROM batch_trace_event e
             LEFT JOIN supplier s ON s.id = e.supplier_id

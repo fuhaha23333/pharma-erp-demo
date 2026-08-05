@@ -1,0 +1,24 @@
+server {
+    listen 443 ssl http2;
+    server_name example.invalid;
+
+    # 证书路径由部署环境提供，不要把私钥提交到仓库。
+    ssl_certificate /path/from/deployment/fullchain.pem;
+    ssl_certificate_key /path/from/deployment/private.key;
+
+    root /srv/pharma-erp/frontend;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "no-store";
+    }
+}

@@ -15,6 +15,10 @@
 空数据库首次启动前，先执行根目录的 `pharma_erp_schema.sql`，并通过 Spring Boot 配置或 `SPRING_DATASOURCE_*` 环境变量提供可用的开发库账号。然后仅在首次初始化时设置环境变量：
 
 ```bash
+export SPRING_DATASOURCE_USERNAME=navicat
+read -rsp '请输入 WSL MySQL 密码: ' SPRING_DATASOURCE_PASSWORD
+export SPRING_DATASOURCE_PASSWORD
+
 export PHARMA_BOOTSTRAP_ENABLED=true
 export PHARMA_BOOTSTRAP_USERNAME=admin
 read -rsp '请输入至少12位的独立强密码: ' PHARMA_BOOTSTRAP_PASSWORD
@@ -36,6 +40,8 @@ curl --user "$PHARMA_BOOTSTRAP_USERNAME:$PHARMA_BOOTSTRAP_PASSWORD" \
 | 模块 | 方法与路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | 认证 | `GET /system/auth/me` | 已认证 | 当前用户、角色和权限 |
+
+认证失败统一返回 JSON `401`，且不返回 `WWW-Authenticate` 挑战头，避免使用自定义登录页时浏览器再次弹出原生 HTTP Basic 登录窗口。
 | 用户 | `POST /system/users` | `SYS_USER_WRITE` | 创建用户，密码保存为 BCrypt 哈希 |
 | 用户 | `PUT /system/users/{userId}` | `SYS_USER_WRITE` | 修改姓名、联系方式和部门 |
 | 用户 | `PUT /system/users/{userId}/status` | `SYS_USER_STATUS` | 启用或停用账号 |
